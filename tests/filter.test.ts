@@ -88,11 +88,16 @@ describe("exclusionReason", () => {
 });
 
 describe("selectRestartableApps", () => {
-  it("filters, names, classifies and sorts by name then PID", () => {
+  it("filters, names, classifies and sorts by name, bundle path, then PID", () => {
     const apps = selectRestartableApps([
       raw("zed", { pid: 3 }),
       raw("Arc", { pid: 9 }),
       raw("Arc", { pid: 2 }),
+      raw("Arc", {
+        pid: 1,
+        bundlePath: "/Users/test/Arc.app",
+        executablePath: "/Users/test/Arc.app/Contents/MacOS/Arc",
+      }),
       raw("Menu", { pid: 4, activationPolicy: 1, name: null }),
       raw("Finder", { pid: 5, bundleId: "com.apple.finder" }),
     ]);
@@ -102,10 +107,11 @@ describe("selectRestartableApps", () => {
       [
         ["Arc", 2, "regular"],
         ["Arc", 9, "regular"],
+        ["Arc", 1, "regular"],
         ["Menu", 4, "accessory"],
         ["zed", 3, "regular"],
       ],
     );
-    assert.equal(countInstances(apps).get("com.example.arc"), 2);
+    assert.equal(countInstances(apps).get("com.example.arc"), 3);
   });
 });
