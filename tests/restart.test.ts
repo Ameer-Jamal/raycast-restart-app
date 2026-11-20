@@ -92,6 +92,27 @@ describe("RestartCoordinator", () => {
     assert.deepEqual(opens, [{ bundlePath: app.bundlePath, newInstance: false }]);
   });
 
+  it("quits the selected app without reopening it and shares the restart guard", async () => {
+    let finishQuit: (outcome: TerminateOutcome) => void = () => {};
+    const { deps, calls } = fakeDeps({
+      terminate: () =>
+        new Promise((resolve) => {
+          finishQuit = resolve;
+        }),
+      pollsUntilExit: 0,
+    });
+    const coordinator = new RestartCoordinator(deps);
+    const quitting = coordinator.restart(app, { mode: "graceful", quitOnly: true });
+
+    const overlap = await coordinator.restart({ ...app, pid: 5151 }, { mode: "graceful" });
+    assert.deepEqual(overlap, { ok: false, reason: "busy" });
+    finishQuit({ status: "requested" });
+    const result = await quitting;
+    assert.deepEqual(result, { ok: true, outcome: "quit" });
+    assert.equal(describeResult(app, "graceful", result, true).title, "Quit TextEdit");
+    assert.deepEqual(calls, ["terminate:4242:graceful", "isRunning:4242"]);
+  });
+
   it("does not quit or reopen anything when the selection is stale", async () => {
     const { deps, calls } = fakeDeps({
       terminate: async () => ({ status: "stale", detail: "process 4242 now belongs to /Applications/Other.app" }),
