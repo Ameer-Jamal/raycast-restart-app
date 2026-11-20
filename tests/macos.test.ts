@@ -53,13 +53,13 @@ describe("osascript and open argument vectors", () => {
     assert.ok(!TERMINATE_APP_SCRIPT.includes(app.bundlePath));
   });
 
-  it("reopens the exact bundle with /usr/bin/open", async () => {
+  it("reopens the exact bundle with /usr/bin/open in the background", async () => {
     const { exec, calls } = recordingExec("");
     await openBundle(app.bundlePath, false, exec);
     await openBundle(app.bundlePath, true, exec);
     assert.deepEqual(calls, [
-      { file: OPEN_PATH, args: ["-a", app.bundlePath] },
-      { file: OPEN_PATH, args: ["-n", "-a", app.bundlePath] },
+      { file: OPEN_PATH, args: ["-g", "-a", app.bundlePath] },
+      { file: OPEN_PATH, args: ["-g", "-n", "-a", app.bundlePath] },
     ]);
   });
 });

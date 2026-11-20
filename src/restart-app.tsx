@@ -42,6 +42,10 @@ function confirmForceRestart(app: RestartableApp): Promise<boolean> {
 export default function Command() {
   const [state, setState] = useState<LoadState>({ apps: [], isLoading: true });
   const [busyKeys, setBusyKeys] = useState<ReadonlySet<string>>(new Set());
+  const [searchText, setSearchText] = useState("");
+  const [hasStartedRestart, setHasStartedRestart] = useState(false);
+  const waitingForSearch = hasStartedRestart && !searchText.trim();
+  const visibleApps = waitingForSearch ? [] : state.apps;
   const loadGeneration = useRef(0);
 
   const load = useCallback(async () => {
@@ -79,6 +83,10 @@ export default function Command() {
         const title = progressTitle(app, mode, stage);
         if (!toast) {
           setBusy(app, true);
+          if (mode === "graceful") {
+            setHasStartedRestart(true);
+            setSearchText("");
+          }
           toast = showToast({ style: Toast.Style.Animated, title });
         } else {
           void toast.then((shown) => {
@@ -122,8 +130,16 @@ export default function Command() {
   }
 
   return (
-    <List isLoading={state.isLoading} searchBarPlaceholder="Search running apps by name or bundle ID">
-      {state.error && state.apps.length === 0 ? (
+    <List
+      isLoading={state.isLoading}
+      searchBarPlaceholder="Search running apps by name or bundle ID"
+      filtering
+      searchText={searchText}
+      onSearchTextChange={setSearchText}
+    >
+      {waitingForSearch ? (
+        <List.EmptyView icon={Icon.MagnifyingGlass} title="Search for the Next App" />
+      ) : state.error && state.apps.length === 0 ? (
         <List.EmptyView
           icon={{ source: Icon.Warning, tintColor: Color.Red }}
           title="Couldn't Load Running Apps"
@@ -150,7 +166,7 @@ export default function Command() {
           }
         />
       )}
-      {state.apps.map((app) => {
+      {visibleApps.map((app) => {
         const busy = busyKeys.has(bundleKey(app));
         const sharedName = (nameCounts.get(app.name.toLowerCase()) ?? 0) > 1;
         const duplicated = (instanceCounts.get(bundleKey(app)) ?? 0) > 1;
